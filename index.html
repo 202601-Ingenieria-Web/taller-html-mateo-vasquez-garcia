@@ -1,0 +1,75 @@
+<!-- * Hola, aqui Mateo, e aqui un codigo un tanto sencillo que tiene como finalidad demostrar la conexion con una API, en este caso la pokeApi, dado que es libre y gratuita -->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pokeDex</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-container">
+                <div class="nombre">
+                    <svg  xmlns="http://www.w3.org/2000/svg" width="34" height="34" 
+                    fill="#fd0c0c" viewBox="2 2 20 20" >
+                    <!--Boxicons v3.0.8 https://boxicons.com | License  https://docs.boxicons.com/free-->
+                    <path d="M21.03 12.74c.57-.14.97-.65.97-1.24s-.4-1.1-.97-1.24L20 10c0-1.11-.31-2.14-.83-3.03l.44-.66c.33-.49.28-1.14-.12-1.57s-1.04-.54-1.55-.27l-.79.43c-.92-.57-1.99-.9-3.14-.9l-.26-1.03C13.61 2.4 13.1 2 12.51 2s-1.1.4-1.24.97L11.01 4h-2.5c-3.58 0-6.5 2.92-6.5 6.5S4.93 17 8.51 17h.5v4c0 .55.45 1 1 1h9c.55 0 1-.45 1-1v-2l1.03-.26c.57-.14.97-.65.97-1.24s-.4-1.1-.97-1.24L20.01 16v-3l1.03-.26ZM18 20h-7v-3h3v-2H8.5C6.02 15 4 12.98 4 10.5S6.02 6 8.5 6H14c2.21 0 4 1.79 4 4z"></path><path d="M12.5 8a1.5 1.5 0 1 0 0 3 1.5 1.5 0 1 0 0-3m-6 1a.5.5 0 1 0 0 1 .5.5 0 1 0 0-1"></path>
+                    </svg> <!-- aqui, agrego un icono de un dinosaurio porque me gustan los dinosaurios y pa que se vea bonito; utilisamos uno de los iconos gratuitos de boxicons -->
+                    <h1>poke<strong>Dex</strong></h1>
+                </div>
+                <div class="navBar">
+                    <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24"  
+                    fill="#fcfcfc" viewBox="2 2 20 20" >
+                    <!--Boxicons v3.0.8 https://boxicons.com | License  https://docs.boxicons.com/free-->
+                    <path d="M18 10c0-4.41-3.59-8-8-8s-8 3.59-8 8 3.59 8 8 8c1.85 0 3.54-.63 4.9-1.69l5.1 5.1L21.41 20l-5.1-5.1A8 8 0 0 0 18 10M4 10c0-3.31 2.69-6 6-6s6 2.69 6 6-2.69 6-6 6-6-2.69-6-6"></path>
+                    </svg> <!-- Con la finalidad de ser redundantes o un poco explicitos, agregamos una lupa al navbar para que se vea mas claro que es para buscar -->
+                    <input type="text" id="input-search" placeholder="Buscar un pokemon por nombre o por numero...">
+                </div>
+            </div>
+        </header>
+        <main class="main-content">
+            <div id="pokemon-grid" class="pokemon-grid hidden">
+                <!-- Aqui pondremos las card correspondientes a los pokemons filtrados -->
+            </div>
+
+            <!-- Botones para cambiar de pagina si es que hay mas de 1 -->
+            <div class="pagination">
+                <button id="button-prev" class="button" disabled>
+                    <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24"  
+                    fill="#fcfcfc" viewBox="2 2 20 20" >
+                    <!--Boxicons v3.0.8 https://boxicons.com | License  https://docs.boxicons.com/free-->
+                    <path d="M14.29 6.29 8.59 12l5.7 5.71 1.42-1.42-4.3-4.29 4.3-4.29z"></path>
+                    </svg>Anterior</button>
+                <button id="button-next" class="button">
+                    Siguiente
+                    <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24"  
+                    fill="#fcfcfc" viewBox="2 2 20 20" >
+                    <!--Boxicons v3.0.8 https://boxicons.com | License  https://docs.boxicons.com/free-->
+                    <path d="M9.71 6.29 14.41 11l-4.7 4.71 1.42 1.42 6-6-6-6z"></path>
+                    </svg>
+                </button>
+            </div>
+        </main>
+
+        <!-- Con el fin de mostrar detalles creamos un modal -->
+        <div id="modal-pokemon" class="modal-overlay hidden">
+            <div class="modal">
+                <button id="close-modal" class="close-button">
+                    <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24"  
+                    fill="#fcfcfc" viewBox="2 2 20 20" >
+                    <!--Boxicons v3.0.8 https://boxicons.com | License  https://docs.boxicons.com/free-->
+                    <path d="m7.76 14.83-2.83 2.83 1.41 1.41 2.83-2.83 2.12-2.12.71-.71.71.71 1.41 1.42 3.54 3.53 1.41-1.41-3.53-3.54-1.42-1.41-.71-.71 5.66-5.66-1.41-1.41L12 10.59 6.34 4.93 4.93 6.34 10.59 12l-.71.71z"></path>
+                    </svg>
+                </button>
+                <div id="modal-content" class="modal-content">
+                    <!-- la idea aqui es insertar la data de los pokemons, como sus stats y tipo -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="./script.js"></script>
+</body>
+</html>
