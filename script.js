@@ -8,10 +8,17 @@ const closeModalBtn = document.getElementById('close-modal');
 const modalContent = document.getElementById('modal-content');
 
 let paginaActual = 0;
-const limite = 24; //de modo que organicemos un maximo de 25 pokemons por pagina, es decir 5 lineas de 4 pokemons cada una
+const limite = 24; //de modo que organicemos un maximo de 24 pokemons por pagina, es decir 6 lineas de 4 pokemons cada una
 let listaPokemons = [];  // lista de la página actual (24 pokemon)
-let listaCompleta = [];  // lista completa usada para buscar en todos los pokemon
+let listaCompleta = [];  // lista completa usada para buscar en todos los pokemon, esto lo hago para evitar 
+// problemas con la búsqueda al tener solo acceso a los pokemon de la página actual, lo que hacia que si un 
+// término de búsqueda no estaba en esa página, no se mostrara ningún resultado aunque existiera en otra página
+// ademas de permitir la busqueda parcial por nombre, ejemplo si busco "dra", me apareceran filtrados todos los 
+// pokemons que contienen "dra", como por ejemplo DRAgapult, RegiDRAgo, DRAcozolt, entre otros
 let busqueda = false;
+let resultadosBusqueda = []; // todos los resultados del filtro actual, esto lo hago dado que un problema que 
+// encontre es que si un termino de busqueda contaba con mas de 24 pokemons no se podian visualizar todos.
+let paginaBusqueda = 0;    // offset dentro de resultadosBusqueda
 
 // Carga inicial
 async function inicializar() {
@@ -58,8 +65,19 @@ async function mostrarPokemons(listaPokemons) {
 
     const promises = listaPokemons.map(p => fetch(p.url).then(res => res.json()));
     const pokemonDetails = await Promise.all(promises);
-    
-    pokemonDetails.forEach(pokemon => {
+
+    // Filtramos los pokemon que no tienen ningún sprite disponible (formas sin artwork como
+    // garchomp-mega-z, magearna-original, tatsugiri-curly-mega, etc.) para no mostrar cartas vacías
+    // esto lo hago mas que nada porque los pokemons que identifique sin sprite, eran versiones de otro que si tiene sprite
+    // un ejemplo de esto es el tatsugiri stretchy-mega, que si tiene sprite pero el curly o el droopy no
+    // apesar de compartir stats y demas, por lo que decidi no mostrarlos para evitar cargas inecesarias y que no queden completamente bien
+    const pokemonsConSprite = pokemonDetails.filter(pokemon => {
+        const artworkUrl = pokemon.sprites.other?.['official-artwork']?.front_default;
+        const spriteUrl = pokemon.sprites.front_default;
+        return artworkUrl || spriteUrl;
+    });
+
+    pokemonsConSprite.forEach(pokemon => {
         const card = cartaPokemon(pokemon);
         pokemonGrid.appendChild(card);
     });
@@ -68,9 +86,12 @@ async function mostrarPokemons(listaPokemons) {
 function cartaPokemon(pokemon) {
     const card = document.createElement('div');
     card.classList.add('pokemon-card');
-    const id = pokemon.id.toString().padStart(3, '0');
+    // Usamos el ID de la especie (extraído de species.url) para mostrar el número correcto
+    // aqui tuve unn problemita que logre solucionar y es que pokemons con varias verciones tenian distinto ID o numero de pokedex, por lo que se hizo el ajuste a species.url
+    const speciesId = parseInt(pokemon.species.url.split('/').slice(-2, -1)[0]);
+    const id = speciesId.toString().padStart(3, '0');
     const tipoPrincipal = pokemon.types[0].type.name;
-    const imgUrl = pokemon.sprites.other['official-artwork'].front_default || pokemon.sprites.front_default; //TODO: Revisar si se puede cambiar
+    const imgUrl = pokemon.sprites.other['official-artwork'].front_default || pokemon.sprites.front_default; //algunos pokemons no tienen artwork oficial, asi que usamos el sprite normal como fallback
     //Para que se vea mejor, vamos a darle al CSS el color dependiendo del tipo
     card.style.setProperty('--type-color', `var(--type-${tipoPrincipal})`);
     let typesHtml = '';
@@ -106,27 +127,61 @@ searchInput.addEventListener('input', async(e) =>{
     }
 
     busqueda = true;
-    document.querySelector('.pagination').style.display = 'none';
-    // Buscamos en listaCompleta para encontrar pokemon de cualquier página
-    const pokemonsFiltrados = listaCompleta.filter(p => p.name.includes(termino) || p.url.split('/').slice(-2, -1)[0].includes(termino)).slice(0, 24);
+    paginaBusqueda = 0; // reiniciamos a la primera página cada vez que cambia el término
 
-    if (pokemonsFiltrados.length === 0){
-        pokemonGrid.innerHTML = '<p>No se encontraron pokemons que coincidan con tu búsqueda.</p>';
-    }else{
-        mostrarPokemons(pokemonsFiltrados);
-    }
+    // Buscamos en listaCompleta para encontrar pokemon de cualquier página.
+    // Para búsquedas numéricas usamos igualdad exacta contra el ID de la URL,
+    const esNumero = /^\d+$/.test(termino);
+    resultadosBusqueda = listaCompleta.filter(p => {
+        const urlId = p.url.split('/').slice(-2, -1)[0];
+        if (esNumero) {
+            return p.name.includes(termino) || urlId === termino;
+        }
+        return p.name.includes(termino);
+    });
+
+    mostrarPaginaBusqueda();
 });
+
+// Muestra la página actual de resultados de búsqueda y actualiza los botones
+function mostrarPaginaBusqueda() {
+    if (resultadosBusqueda.length === 0) {
+        pokemonGrid.innerHTML = '<p>No se encontraron pokemons que coincidan con tu búsqueda.</p>';
+        document.querySelector('.pagination').style.display = 'none';
+        return;
+    }
+
+    const pagina = resultadosBusqueda.slice(paginaBusqueda, paginaBusqueda + limite);
+    mostrarPokemons(pagina);
+
+    // Reutilizamos los botones de paginado mostrando/ocultando según haya más páginas
+    btnPrev.disabled = paginaBusqueda === 0;
+    btnNext.disabled = paginaBusqueda + limite >= resultadosBusqueda.length;
+    document.querySelector('.pagination').style.display = 'flex';
+}
 
 // Botones de paginado
 btnNext.addEventListener('click', () => {
-    paginaActual += limite; // avanzamos al siguiente bloque
-    cargarPokemons(paginaActual, limite);
+    if (busqueda) {
+        paginaBusqueda += limite;
+        mostrarPaginaBusqueda();
+    } else {
+        paginaActual += limite; // avanzamos al siguiente bloque
+        cargarPokemons(paginaActual, limite);
+    }
 });
 
 btnPrev.addEventListener('click', () => {
-    if (paginaActual >= limite) {
-        paginaActual -= limite; // retrocedemos al bloque anterior
-        cargarPokemons(paginaActual, limite);
+    if (busqueda) {
+        if (paginaBusqueda >= limite) {
+            paginaBusqueda -= limite;
+            mostrarPaginaBusqueda();
+        }
+    } else {
+        if (paginaActual >= limite) {
+            paginaActual -= limite; // retrocedemos al bloque anterior
+            cargarPokemons(paginaActual, limite);
+        }
     }
 });
 
@@ -147,7 +202,9 @@ modalOverlay.addEventListener('click', (e) => {
 
 //Modal de detalles del pokemon
 function verDetallesPokemon(pokemon) {
-    const id = pokemon.id.toString().padStart(3, '0');
+    // Igual que en la carta, usamos el ID de la especie para el número de Pokédex correcto
+    const speciesId = parseInt(pokemon.species.url.split('/').slice(-2, -1)[0]);
+    const id = speciesId.toString().padStart(3, '0');
     const tipoPrincipal = pokemon.types[0].type.name;
     const tipoSecundario = pokemon.types[1] ? pokemon.types[1].type.name : null;
     const imgUrl = pokemon.sprites.other['official-artwork'].front_default || pokemon.sprites.front_default;
